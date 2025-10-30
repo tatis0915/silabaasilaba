@@ -227,8 +227,8 @@ public class Nivel1 {
             if (timeline != null) {
                 timeline.stop(); // Detener el temporizador
             }
-            // Guardar el progreso con el tiempo transcurrido
-            ConexionBD.guardarProgresoConTiempo(usuarioId, 1, palabrasCompletadas, false, tiempoSegundos);
+            // Guardar el progreso con el tiempo transcurrido en segundo plano
+            new Thread(() -> ConexionBD.guardarProgresoConTiempo(usuarioId, 1, palabrasCompletadas, false, tiempoSegundos)).start();
 
             // Regresar al menú principal
             Opciones opciones = new Opciones(usuarioId);
@@ -299,7 +299,8 @@ public class Nivel1 {
 
         if (correcto) {
             palabrasCompletadas++;
-            ConexionBD.guardarProgreso(usuarioId, 1, palabrasCompletadas, palabrasCompletadas == 25);
+            // Guardar en segundo plano para no bloquear el hilo de la UI
+            new Thread(() -> ConexionBD.guardarProgreso(usuarioId, 1, palabrasCompletadas, palabrasCompletadas == 25)).start();
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Correcto");
@@ -310,7 +311,8 @@ public class Nivel1 {
         } else {
             vidas--;
             cantidadErrores++;
-            ConexionBD.guardarIntento(usuarioId, 1, cantidadErrores);
+            // Guardar intento en segundo plano
+            new Thread(() -> ConexionBD.guardarIntento(usuarioId, 1, cantidadErrores)).start();
             actualizarContadorVidas();
 
             if (vidas <= 0) {
@@ -343,8 +345,8 @@ public class Nivel1 {
             timeline.stop(); // Detiene el temporizador
         }
     
-        // Guardar el progreso con tiempo total en segundos
-        ConexionBD.guardarProgresoConTiempo(usuarioId, 1, palabrasCompletadas, false, tiempoSegundos);
+        // Guardar el progreso con tiempo total en segundos en segundo plano
+        new Thread(() -> ConexionBD.guardarProgresoConTiempo(usuarioId, 1, palabrasCompletadas, false, tiempoSegundos)).start();
     
         // Convertir el tiempo total a minutos y segundos
         int minutos = tiempoSegundos / 60;
@@ -366,8 +368,8 @@ public class Nivel1 {
             timeline.stop(); // Detiene el temporizador
         }
     
-        // Guardar el progreso con tiempo total en segundos
-        ConexionBD.guardarProgresoConTiempo(usuarioId, 1, palabrasCompletadas, true, tiempoSegundos);
+        // Guardar el progreso con tiempo total en segundos en segundo plano
+        new Thread(() -> ConexionBD.guardarProgresoConTiempo(usuarioId, 1, palabrasCompletadas, true, tiempoSegundos)).start();
     
         // Convertir el tiempo total a minutos y segundos
         int minutos = tiempoSegundos / 60;

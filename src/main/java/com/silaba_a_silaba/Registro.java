@@ -158,15 +158,13 @@ public class Registro {
 
     private boolean registrarUsuario(String nombre, String apellido, String fechaNacimiento, String correo, String tarjetaIdentidad) {
         String sql = "INSERT INTO usuario (nombre, apellido, fecha_nacimiento, correo, tarjeta_identidad) VALUES (?, ?, ?, ?, ?)";
+        Connection conn = ConexionBD.conectar();
+        if (conn == null) {
+            System.out.println("Error: La conexión a la base de datos es nula.");
+            return false;
+        }
 
-        try (Connection conn = ConexionBD.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            if (conn == null) {
-                System.out.println("Error: La conexión a la base de datos es nula.");
-                return false;
-            }
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             System.out.println("Registrando usuario con los siguientes datos:");
             System.out.println("Nombre: " + nombre);
             System.out.println("Apellido: " + apellido);
@@ -187,39 +185,42 @@ public class Registro {
             System.out.println("Error al registrar el usuario: " + e.getMessage());
             e.printStackTrace();
             return false;
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
     }
 
     private int obtenerUsuarioId(String tarjetaIdentidad) {
         String sql = "SELECT id_usuario FROM usuario WHERE tarjeta_identidad = ?";
+        Connection conn = ConexionBD.conectar();
+        if (conn == null) {
+            System.out.println("Error: La conexión a la base de datos es nula.");
+            return -1;
+        }
 
-        try (Connection conn = ConexionBD.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        if (tarjetaIdentidad == null || tarjetaIdentidad.isEmpty()) {
+            System.out.println("Error: El valor de tarjetaIdentidad es nulo o vacío.");
+            try { conn.close(); } catch (SQLException ignored) {}
+            return -1;
+        }
 
-            if (conn == null) {
-                System.out.println("Error: La conexión a la base de datos es nula.");
-                return -1;
-            }
-
-            if (tarjetaIdentidad == null || tarjetaIdentidad.isEmpty()) {
-                System.out.println("Error: El valor de tarjetaIdentidad es nulo o vacío.");
-                return -1;
-            }
-
-            System.out.println("Ejecutando consulta con tarjetaIdentidad: " + tarjetaIdentidad);
+        System.out.println("Ejecutando consulta con tarjetaIdentidad: " + tarjetaIdentidad);
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, tarjetaIdentidad);
-
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                int idUsuario = rs.getInt("id_usuario");
-                System.out.println("Usuario encontrado: ID = " + idUsuario);
-                return idUsuario;
-            } else {
-                System.out.println("No se encontró un usuario con la tarjeta de identidad: " + tarjetaIdentidad);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int idUsuario = rs.getInt("id_usuario");
+                    System.out.println("Usuario encontrado: ID = " + idUsuario);
+                    return idUsuario;
+                } else {
+                    System.out.println("No se encontró un usuario con la tarjeta de identidad: " + tarjetaIdentidad);
+                }
             }
         } catch (SQLException e) {
             System.out.println("Error al obtener el ID del usuario: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
         return -1; // Retorna -1 si no se encuentra el usuario
     }

@@ -34,22 +34,32 @@ public class Reportes {
     }
 
     private void cargarDatosUsuario() {
-        try (Connection conn = ConexionBD.conectar();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT nombre, tarjeta_identidad FROM usuario WHERE id_usuario = ?")) {
+        Connection conn = ConexionBD.conectar();
+        if (conn == null) {
+            System.out.println("Error: La conexión a la base de datos es nula.");
+            nombreEstudiante = "Desconocido";
+            identificacion = "N/A";
+            return;
+        }
+
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT nombre, tarjeta_identidad FROM usuario WHERE id_usuario = ?")) {
             stmt.setInt(1, usuarioId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                nombreEstudiante = rs.getString("nombre");
-                identificacion = rs.getString("tarjeta_identidad");
-            } else {
-                nombreEstudiante = "Desconocido";
-                identificacion = "N/A";
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    nombreEstudiante = rs.getString("nombre");
+                    identificacion = rs.getString("tarjeta_identidad");
+                } else {
+                    nombreEstudiante = "Desconocido";
+                    identificacion = "N/A";
+                }
             }
         } catch (SQLException e) {
             System.out.println("Error al cargar los datos del usuario: " + e.getMessage());
             nombreEstudiante = "Desconocido";
             identificacion = "N/A";
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
     }
 
@@ -141,68 +151,90 @@ public class Reportes {
         tabla.add(lblTiempoPromedio, 3, 0);
 
         // Cargar datos del nivel
-        try (Connection conn = ConexionBD.conectar();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT p.palabras_formadas, p.completado, " +
-                     "       (SELECT COUNT(*) FROM intento i WHERE i.usuario_id = p.usuario_id AND i.nivel = p.nivel) AS intentos, " +
-                     "       p.tiempo_total_segundos " +
-                     "FROM progreso p " +
-                     "WHERE p.usuario_id = ? AND p.nivel = ?")) {
+        Connection conn = ConexionBD.conectar();
+        if (conn == null) {
+            System.out.println("Error: La conexión a la base de datos es nula.");
+            // Rellenar con valores por defecto
+            Label lblPalabras = new Label("0/25");
+            lblPalabras.setStyle("-fx-font-weight: bold;");
+            tabla.add(lblPalabras, 0, 1);
 
-            stmt.setInt(1, usuarioId);
-            stmt.setInt(2, nivel);
-            ResultSet rs = stmt.executeQuery();
+            Label lblComp = new Label("No");
+            lblComp.setStyle("-fx-font-weight: bold;");
+            tabla.add(lblComp, 1, 1);
 
-            if (rs.next()) {
-                // Palabras formadas
-                Label lblPalabras = new Label(rs.getInt("palabras_formadas") + "/25");
-                lblPalabras.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblPalabras, 0, 1);
+            Label lblInt = new Label("0");
+            lblInt.setStyle("-fx-font-weight: bold;");
+            tabla.add(lblInt, 2, 1);
 
-                // Completado
-                Label lblComp = new Label(rs.getBoolean("completado") ? "Sí" : "No");
-                lblComp.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblComp, 1, 1);
+            Label lblTiempo = new Label("N/A");
+            lblTiempo.setStyle("-fx-font-weight: bold;");
+            tabla.add(lblTiempo, 3, 1);
+        } else {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT p.palabras_formadas, p.completado, " +
+                            "       (SELECT COUNT(*) FROM intento i WHERE i.usuario_id = p.usuario_id AND i.nivel = p.nivel) AS intentos, " +
+                            "       p.tiempo_total_segundos " +
+                            "FROM progreso p " +
+                            "WHERE p.usuario_id = ? AND p.nivel = ?")) {
 
-                // Intentos realizados
-                Label lblInt = new Label(String.valueOf(rs.getInt("intentos")));
-                lblInt.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblInt, 2, 1);
+                stmt.setInt(1, usuarioId);
+                stmt.setInt(2, nivel);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        // Palabras formadas
+                        Label lblPalabras = new Label(rs.getInt("palabras_formadas") + "/25");
+                        lblPalabras.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblPalabras, 0, 1);
 
-                // Tiempo promedio (convertir de segundos a minutos y segundos)
-                int tiempoTotalSegundos = rs.getInt("tiempo_total_segundos");
-                Label lblTiempo;
-                if (tiempoTotalSegundos > 0) {
-                    int minutos = tiempoTotalSegundos / 60;
-                    int segundos = tiempoTotalSegundos % 60;
-                    String tiempoFormateado = minutos + " minutos y " + segundos + " segundos";
-                    lblTiempo = new Label(tiempoFormateado);
-                } else {
-                    lblTiempo = new Label("N/A");
+                        // Completado
+                        Label lblComp = new Label(rs.getBoolean("completado") ? "Sí" : "No");
+                        lblComp.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblComp, 1, 1);
+
+                        // Intentos realizados
+                        Label lblInt = new Label(String.valueOf(rs.getInt("intentos")));
+                        lblInt.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblInt, 2, 1);
+
+                        // Tiempo promedio (convertir de segundos a minutos y segundos)
+                        int tiempoTotalSegundos = rs.getInt("tiempo_total_segundos");
+                        Label lblTiempo;
+                        if (tiempoTotalSegundos > 0) {
+                            int minutos = tiempoTotalSegundos / 60;
+                            int segundos = tiempoTotalSegundos % 60;
+                            String tiempoFormateado = minutos + " minutos y " + segundos + " segundos";
+                            lblTiempo = new Label(tiempoFormateado);
+                        } else {
+                            lblTiempo = new Label("N/A");
+                        }
+                        lblTiempo.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblTiempo, 3, 1);
+                    } else {
+                        // Si no hay datos para el nivel
+                        Label lblPalabras = new Label("0/25");
+                        lblPalabras.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblPalabras, 0, 1);
+
+                        Label lblComp = new Label("No");
+                        lblComp.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblComp, 1, 1);
+
+                        Label lblInt = new Label("0");
+                        lblInt.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblInt, 2, 1);
+
+                        Label lblTiempo = new Label("N/A");
+                        lblTiempo.setStyle("-fx-font-weight: bold;");
+                        tabla.add(lblTiempo, 3, 1);
+                    }
                 }
-                lblTiempo.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblTiempo, 3, 1);
-            } else {
-                // Si no hay datos para el nivel
-                Label lblPalabras = new Label("0/25");
-                lblPalabras.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblPalabras, 0, 1);
 
-                Label lblComp = new Label("No");
-                lblComp.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblComp, 1, 1);
-
-                Label lblInt = new Label("0");
-                lblInt.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblInt, 2, 1);
-
-                Label lblTiempo = new Label("N/A");
-                lblTiempo.setStyle("-fx-font-weight: bold;");
-                tabla.add(lblTiempo, 3, 1);
+            } catch (SQLException e) {
+                System.out.println("Error al cargar los datos del nivel " + nivel + ": " + e.getMessage());
+            } finally {
+                try { conn.close(); } catch (SQLException ignored) {}
             }
-
-        } catch (SQLException e) {
-            System.out.println("Error al cargar los datos del nivel " + nivel + ": " + e.getMessage());
         }
 
         VBox contenedorNivel = new VBox(10, lblTitulo, tabla);

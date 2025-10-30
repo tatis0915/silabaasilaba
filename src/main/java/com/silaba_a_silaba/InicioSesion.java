@@ -114,19 +114,18 @@ public class InicioSesion {
     private int obtenerUsuarioId(String nombre, String apellido, String tarjetaIdentidad) {
         String sql = "SELECT id_usuario FROM usuario WHERE nombre = ? AND apellido = ? AND tarjeta_identidad = ?";
 
-        try (Connection conn = ConexionBD.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        if (nombre == null || nombre.isEmpty() || apellido == null || apellido.isEmpty() || tarjetaIdentidad == null || tarjetaIdentidad.isEmpty()) {
+            System.out.println("Error: Uno o más valores son nulos o vacíos.");
+            return -1;
+        }
 
-            if (conn == null) {
-                System.out.println("Error: La conexión a la base de datos es nula.");
-                return -1;
-            }
+        Connection conn = ConexionBD.conectar();
+        if (conn == null) {
+            System.out.println("Error: La conexión a la base de datos es nula.");
+            return -1;
+        }
 
-            if (nombre == null || nombre.isEmpty() || apellido == null || apellido.isEmpty() || tarjetaIdentidad == null || tarjetaIdentidad.isEmpty()) {
-                System.out.println("Error: Uno o más valores son nulos o vacíos.");
-                return -1;
-            }
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             System.out.println("Ejecutando consulta con los siguientes datos:");
             System.out.println("Nombre: " + nombre);
             System.out.println("Apellido: " + apellido);
@@ -136,18 +135,22 @@ public class InicioSesion {
             stmt.setString(2, apellido);
             stmt.setString(3, tarjetaIdentidad);
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                int idUsuario = rs.getInt("id_usuario");
-                System.out.println("Usuario encontrado: ID = " + idUsuario);
-                return idUsuario;
-            } else {
-                System.out.println("No se encontró un usuario con los datos proporcionados.");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int idUsuario = rs.getInt("id_usuario");
+                    System.out.println("Usuario encontrado: ID = " + idUsuario);
+                    return idUsuario;
+                } else {
+                    System.out.println("No se encontró un usuario con los datos proporcionados.");
+                }
             }
         } catch (SQLException e) {
             System.out.println("Error al obtener el ID del usuario: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
+
         return -1; // Retorna -1 si no se encuentra el usuario
     }
 

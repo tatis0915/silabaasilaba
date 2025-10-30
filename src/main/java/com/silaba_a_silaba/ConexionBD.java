@@ -29,9 +29,12 @@ public class ConexionBD {
                      "VALUES (?, ?, ?, ?) " +
                      "ON DUPLICATE KEY UPDATE palabras_formadas = ?, completado = ?";
 
-        try (Connection conn = conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        Connection conn = conectar();
+        if (conn == null) {
+            System.out.println("No se pudo guardar el progreso: conexión nula.");
+            return;
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, usuarioId);
             stmt.setInt(2, nivel);
             stmt.setInt(3, palabrasFormadas);
@@ -44,6 +47,8 @@ public class ConexionBD {
         } catch (SQLException e) {
             System.out.println("Error al guardar el progreso: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
     }
 
@@ -53,9 +58,12 @@ public class ConexionBD {
                      "VALUES (?, ?, ?, ?, ?) " +
                      "ON DUPLICATE KEY UPDATE palabras_formadas = ?, completado = ?, tiempo_total_segundos = ?";
 
-        try (Connection conn = conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        Connection conn = conectar();
+        if (conn == null) {
+            System.out.println("No se pudo guardar el progreso con tiempo: conexión nula.");
+            return;
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, usuarioId);
             stmt.setInt(2, nivel);
             stmt.setInt(3, palabrasFormadas);
@@ -72,6 +80,8 @@ public class ConexionBD {
         } catch (SQLException e) {
             System.out.println("Error al guardar el progreso con tiempo: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
     }
 
@@ -79,9 +89,12 @@ public class ConexionBD {
     public static void guardarIntento(int usuarioId, int nivel, int cantidadErrores) {
         String sql = "INSERT INTO intento (usuario_id, nivel, cantidad_errores) VALUES (?, ?, ?)";
 
-        try (Connection conn = conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        Connection conn = conectar();
+        if (conn == null) {
+            System.out.println("No se pudo guardar el intento: conexión nula.");
+            return;
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, usuarioId);
             stmt.setInt(2, nivel);
             stmt.setInt(3, cantidadErrores);
@@ -91,6 +104,8 @@ public class ConexionBD {
         } catch (SQLException e) {
             System.out.println("Error al guardar el intento: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
     }
 
@@ -100,9 +115,12 @@ public class ConexionBD {
                      "VALUES (?, ?, ?, ?) " +
                      "ON DUPLICATE KEY UPDATE progreso = ?, actividades_completadas = ?, tiempo_total_segundos = ?";
 
-        try (Connection conn = conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        Connection conn = conectar();
+        if (conn == null) {
+            System.out.println("No se pudo actualizar el reporte: conexión nula.");
+            return;
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, usuarioId);
             stmt.setInt(2, progreso);
             stmt.setInt(3, actividadesCompletadas);
@@ -116,6 +134,8 @@ public class ConexionBD {
         } catch (SQLException e) {
             System.out.println("Error al actualizar el reporte: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { conn.close(); } catch (SQLException ignored) {}
         }
     }
 }
